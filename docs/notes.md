@@ -16,3 +16,12 @@
 2. Task board ends ~Week 18 (4 Aug); timeline runs to Week 24.
 3. Risk CSV has no probability or severity scores, so "top 3" requires a stated ranking rationale.
 4. Timeline is in weeks, not dates; a project start date must be assumed.
+   
+## Observability setup (Langfuse)
+- Platform: n8n Cloud; tracing: Langfuse Cloud (US region, v4.72), project "Mira".
+- n8n has no built-in Langfuse node, so traces are sent with an HTTP Request node using Basic Auth (public key / secret key).
+- First attempt: legacy /api/public/ingestion endpoint. It returned 201 but the trace was not visible in the v4 Tracing table (v4 is observation-centric, and a bare trace-create event has no observation).
+- The legacy endpoint is also deprecated; Langfuse stops accepting traces on it on 2026-11-16.
+- Fix: switched to the OTLP endpoint /api/public/otel/v1/traces with a JSON body (resourceSpans) and langfuse.observation.input / langfuse.observation.output attributes. Trace appeared after about a minute.
+- Lesson for Q4: check the ingestion API version when connecting observability; a 2xx response does not guarantee the data is visible.
+- Evidence: results/langfuse_test_trace.png
