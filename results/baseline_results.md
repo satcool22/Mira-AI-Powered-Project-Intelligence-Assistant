@@ -4,7 +4,7 @@ As-of date: 2026-04-22 | Project start: 2026-04-06 | Model: gpt-4o-mini
 
 | Test | Input | Output (summary) | Hallucination | Result |
 |---|---|---|---|---|
-| T1 | Plan for ABCDE project | Pending | | |
+| T1 | Plan for ABCDE project | 8 phases, weeks and dates from the timeline; only the 3 stated goals; budget and team size marked not specified. Prompt fixed once: added the Week 1 start-date assumption and removed a stray "Not specified" bullet. | No | Pass |
 | T2 | Plan for: "We want to build a chatbot." | Asks for scope, goals, timeline, team; no plan produced | No | Pass |
 | T3 | Risk assessment, ABCDE | Pending | | |
 | T4 | Risk assessment for: "New project starting soon." | Says the project is unknown; asks for project details, scope, timeline, team | No | Pass |
