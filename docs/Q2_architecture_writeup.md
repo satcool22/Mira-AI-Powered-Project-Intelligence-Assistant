@@ -1,6 +1,6 @@
 # Mira: Architecture Writeup (Q2)
 
-Author: [Sathish Doraiswamy] | Nexora Pvt. Ltd. | AI Adoption Project, ABCDE Ltd.
+Author: Sathish Doraiswamy | Nexora Pvt. Ltd. | AI Adoption Project, ABCDE Ltd.
 
 ## 1. Problem summary
 Nexora's PMs and TPMs manage several projects at once and lose hours building plans (3-4 hours each), compiling weekly status reports (1-2 hours) and doing risk assessments in inconsistent formats. Mira turns four project files (description, timeline, risk register, task board) into structured plans, risk matrices, status reports, milestone alerts and stakeholder updates. The biggest risk is fabrication (invented milestones, risks or task statuses), so every output must be grounded in the files or say that information is missing.
