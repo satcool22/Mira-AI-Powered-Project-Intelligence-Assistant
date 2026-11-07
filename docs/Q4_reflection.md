@@ -3,7 +3,7 @@
 Prepared by: Sathish Doraiswamy | Nexora Pvt. Ltd.
 
 ## 1. What the traces and test runs showed
-Every request is traced in Langfuse (one trace per request, named mira-<intent>, with the request as input, the answer as output and a route tag). Reading outputs and traces across the 12 baseline tests and the re-runs showed five things:
+Every request is traced in Langfuse (one trace per request, named mira-INTENT, with the request as input, the answer as output and a route tag). Reading outputs and traces across the 12 baseline tests and the re-runs showed five things:
 
 - **The router and the guardrails worked.** All four vague inputs (T2, T4, T6, T9) went to the fixed Clarify reply, which cost only the Orchestrator call ($0.0000764) and invented nothing.
 - **Code-computed facts were never wrong.** Task counts, overdue tasks and date windows came from code, so status counts matched the task board in every run (5 Done, 3 In Progress, 1 Blocked, 16 To Do).
