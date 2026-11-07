@@ -16,6 +16,7 @@ As-of date: 2026-04-22 | Project start: 2026-04-06 | Model: gpt-4o-mini
 | T10 | Status summary counts | Done 5, In Progress 3, Blocked 1, To Do 16, Total 25, matching the CSV (problem statement says 3 Done; CSV has 5). Fixed twice: blocker details were missing (description field now passed through), then the To Do list was omitted (prompt rule 7). See T10_status_summary.md | No | Pass |
 | T11 | Milestones in next 2 weeks | Window 2026-04-22 to 2026-05-06: Phase 2 deliverables (audit report, gap analysis) end in window; Phase 3 starts in window; nothing invented. See T11_upcoming_milestones.md | No | Pass |
 | T12 | Stakeholder email, Sprint 2 | Professional email on Sprint 2 only (T004, T005 done; T006 in progress and past due); counts match; no Sprint 3+ tasks. Prompt fixed once: overdue task must appear under Risks. See T12_stakeholder_email.md | No | Pass |
+
 Screenshots and outputs: see the files in this folder.
 ## Regression run (2026-11-07, tracing enabled)
 All 12 tests were re-run after the prompt fixes, with every request traced in Langfuse (one trace per request). Results matched the first run: 12 of 12 pass, no hallucinated tasks, risks, milestones or numbers. The vague inputs (T2, T4, T6, T9) were correctly answered with a request for more information.
