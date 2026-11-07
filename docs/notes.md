@@ -28,6 +28,6 @@
 
 ## Tracing in the Mira workflow
 - One "Trace" HTTP Request node (OTLP endpoint, Basic Auth) receives the output of all six branches (plan, risk, status, milestone, comms, clarify), so every request creates one trace in Langfuse.
-- Each trace is named mira-<intent>, carries the request as input and Mira's answer as output, and is tagged with the route taken (for example route:clarify).
+- Each trace is named mira-INTENT, carries the request as input and Mira's answer as output, and is tagged with the route taken (for example route:clarify).
 - Issue found: because Trace is the last node, the chat showed Langfuse's ingestion receipt instead of the answer. Fix: a "Final Reply" node after Trace returns the answer from whichever Reply node ran.
 - Limitation: the model calls themselves are not traced as separate generations; token usage is read from the n8n execution view instead.
