@@ -1,0 +1,1036 @@
+{
+  "name": "Mira",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -416,
+        0
+      ],
+      "id": "f333b6d5-2fba-4b83-ad97-6ab3344e3152",
+      "name": "When chat message received",
+      "webhookId": "f6dd1cb8-257a-4cc7-af8c-5be9558e3e16"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f918fb85-5257-44e0-a683-6cb9868d49e2",
+              "name": "as_of_date",
+              "value": "2026-04-22",
+              "type": "string"
+            },
+            {
+              "id": "0142d994-e921-4f4b-b2b3-c5d1643db952",
+              "name": "project_start",
+              "value": "2026-04-06",
+              "type": "string"
+            },
+            {
+              "id": "399bd3a7-9e82-4b85-b56d-7a62a49cc185",
+              "name": "current_sprint",
+              "value": "Sprint 3",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -192,
+        0
+      ],
+      "id": "99121ee6-237c-4196-8b96-d0f8ac1993dd",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "url": "   https://raw.githubusercontent.com/satcool22/Mira-AI-Powered-Project-Intelligence-Assistant/main/data/project_description.txt",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "description"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        32,
+        0
+      ],
+      "id": "a189c878-f4ca-4224-b200-321ab4731f70",
+      "name": "Load Description"
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/satcool22/Mira-AI-Powered-Project-Intelligence-Assistant/main/data/project_timeline.csv",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "timeline"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        256,
+        0
+      ],
+      "id": "03c54dfd-ae43-4752-ac41-90b60de86268",
+      "name": "Load Timeline"
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/satcool22/Mira-AI-Powered-Project-Intelligence-Assistant/main/data/project_risks.csv",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "risks"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ],
+      "id": "8ce4c6fd-c8e9-4745-ae68-47455e71c554",
+      "name": "Load Risks"
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/satcool22/Mira-AI-Powered-Project-Intelligence-Assistant/main/data/sample_task_board.csv",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "task_board"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        704,
+        0
+      ],
+      "id": "3adc4757-15a4-4b2b-bc27-4dae5fa2ba2c",
+      "name": "Load Task Board"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst description = $('Load Description').first().json.description;\nconst timelineCsv = $('Load Timeline').first().json.timeline;\nconst risksCsv = $('Load Risks').first().json.risks;\nconst boardCsv = $('Load Task Board').first().json.task_board;\n\nfunction parseCsv(text) {\n  const rows = [];\n  let row = [], field = '', inQ = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (inQ) {\n      if (c === '\"' && text[i + 1] === '\"') { field += '\"'; i++; }\n      else if (c === '\"') inQ = false;\n      else field += c;\n    } else if (c === '\"') inQ = true;\n    else if (c === ',') { row.push(field); field = ''; }\n    else if (c === '\\n' || c === '\\r') {\n      if (c === '\\r' && text[i + 1] === '\\n') i++;\n      row.push(field); field = '';\n      if (row.length > 1 || row[0] !== '') rows.push(row);\n      row = [];\n    } else field += c;\n  }\n  if (field !== '' || row.length) { row.push(field); rows.push(row); }\n  const header = rows[0].map(h => h.trim());\n  return rows.slice(1).map(r =>\n    Object.fromEntries(header.map((h, i) => [h, (r[i] ?? '').trim()])));\n}\n\nconst addDays = (iso, d) => {\n  const t = new Date(iso + 'T00:00:00Z');\n  t.setUTCDate(t.getUTCDate() + d);\n  return t.toISOString().slice(0, 10);\n};\n\nconst asOf = cfg.as_of_date;\nconst start = cfg.project_start;\n\nconst tasks = parseCsv(boardCsv).map(t => ({\n  task_id: t.task_id, task_name: t.task_name, status: t.status,\n  assignee: t.assignee, priority: t.priority, sprint: t.sprint,\n  due_date: t.due_date, labels: t.labels, description: t.description\n}));\n\nconst counts = { total: tasks.length };\nconst by_sprint = {};\nfor (const t of tasks) {\n  counts[t.status] = (counts[t.status] || 0) + 1;\n  (by_sprint[t.sprint] = by_sprint[t.sprint] || []).push(t);\n}\n\nconst notDone = tasks.filter(t => t.status !== 'Done');\nconst blocked = tasks.filter(t => t.status === 'Blocked');\nconst overdue = notDone.filter(t => t.due_date < asOf);\nconst due_soon = notDone.filter(t => t.due_date >= asOf && t.due_date <= addDays(asOf, 7));\n\nconst timeline = parseCsv(timelineCsv).map(p => ({\n  ...p,\n  start_date: addDays(start, (Number(p.start_week) - 1) * 7),\n  end_date: addDays(start, Number(p.end_week) * 7 - 1)\n}));\nconst windowEnd = addDays(asOf, 14);\nconst phases_ending_in_window = timeline.filter(p => p.end_date >= asOf && p.end_date <= windowEnd);\nconst phases_starting_in_window = timeline.filter(p => p.start_date >= asOf && p.start_date <= windowEnd);\n\nreturn [{\n  json: {\n    chat_input: cfg.chatInput,\n    config: { as_of_date: asOf, project_start: start, current_sprint: cfg.current_sprint },\n    description,\n    timeline,\n    risks: parseCsv(risksCsv),\n    tasks,\n    counts,\n    by_sprint,\n    blocked,\n    overdue,\n    due_soon,\n    phases_ending_in_window,\n    phases_starting_in_window\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        0
+      ],
+      "id": "611b303b-8735-4800-801c-a862deccddb9",
+      "name": "Assemble Context"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "ROLE: You classify requests for a project-management assistant called Mira.\nINPUT: One user request.\nOUTPUT: Return ONLY valid JSON with no markdown and no extra text, with exactly these fields:\n{\"intent\":\"plan|risk|status|milestone|comms|other\",\"input_source\":\"default_project_files|inline_text|none\",\"sprint\":\"Sprint N or null\",\"data_sufficient\":true,\"missing_fields\":[]}\nRULES:\n1) intent: plan = project plan; risk = risk assessment or top risks; status = status report or task counts; milestone = upcoming milestones, blocked tasks or deadline risk; comms = stakeholder update or email; other = anything else.\n2) input_source = \"default_project_files\" when the request refers to the ABCDE project, the provided files, \"the project\", the task board, the timeline, a sprint, or the risk data.\n3) input_source = \"inline_text\" when the request supplies its own content in quotes, for example: for: \"We want to build a chatbot.\" That content replaces the default files.\n4) input_source = \"none\" when the request names no project and gives no content, for example a generic \"2-week project with no details\".\n5) For inline_text or none: data_sufficient is true ONLY if the request contains enough real content for the intent. A plan needs scope, goals and a timeline or team. A risk assessment needs project details. A status report needs actual task names with statuses. Otherwise set data_sufficient to false and list what is missing in missing_fields.\n6) For default_project_files: data_sufficient is true.\n7) sprint: write \"Sprint N\" only if the request names a sprint number, otherwise null. Never guess one.\n8) Do not answer the request."
+            },
+            {
+              "content": "={{ $('Assemble Context').first().json.chat_input }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1152,
+        0
+      ],
+      "id": "5b022e91-294d-43c1-851c-aeb3dea8107a",
+      "name": "Orchestrator",
+      "credentials": {
+        "openAiApi": {
+          "id": "0w8HIjNxXSFcIrwT",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Assemble Context').first().json;\nconst raw = $input.first().json.output[0].content[0].text;\n\nlet route;\ntry {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  route = JSON.parse(m ? m[0] : raw);\n} catch (e) {\n  route = {\n    intent: 'other',\n    input_source: 'none',\n    sprint: null,\n    data_sufficient: false,\n    missing_fields: ['could not understand the request']\n  };\n}\n\nconst intents = ['plan', 'risk', 'status', 'milestone', 'comms', 'other'];\nif (!intents.includes(route.intent)) route.intent = 'other';\n\nconst route_key = (route.data_sufficient === true && route.intent !== 'other')\n  ? route.intent\n  : 'clarify';\n\nreturn [{ json: { ...ctx, route, route_key } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        0
+      ],
+      "id": "52d059d4-4073-479f-a54e-61af596e46aa",
+      "name": "Parse Route"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route_key }}",
+                    "rightValue": "plan",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "88bf9cc5-572a-40cf-9213-f543e3b3dc07"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "plan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "de26b988-ef9c-4dbd-93aa-92c0741570fe",
+                    "leftValue": "={{ $json.route_key }}",
+                    "rightValue": "=risk",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "risk"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "d9f3bf0a-8b8f-4c1b-bbac-92dad816ce69",
+                    "leftValue": "={{ $json.route_key }}",
+                    "rightValue": "=status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "b7380cc7-52c6-461b-aea7-1fbda992e53b",
+                    "leftValue": "={{ $json.route_key }}",
+                    "rightValue": "=milestone",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "milestone"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "8afcde17-8431-4b0c-920d-5ed10414dce9",
+                    "leftValue": "={{ $json.route_key }}",
+                    "rightValue": "=comms",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "comms"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "6279bfe4-35b3-4585-8c29-5e0838396a3d",
+                    "leftValue": "={{ $json.route_key }}",
+                    "rightValue": "=clarify",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "clarify"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        1728,
+        -64
+      ],
+      "id": "94dc407f-3548-4f9a-8b5f-bc3acc56e196",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json.route || {};\nconst missing = (r.missing_fields || []).join(', ');\nlet msg;\n\nif (r.intent === 'plan') {\n  msg = \"I can't build a project plan from this yet, because there isn't enough detail and I won't invent scope or goals. Please share: \"\n    + (missing || 'scope, goals, deliverables, timeline and team size') + '.';\n} else if (r.intent === 'risk') {\n  msg = \"I can't produce a risk assessment yet, because I don't know what the project is. Please share: \"\n    + (missing || 'the project description, scope, timeline and team') + '.';\n} else if (r.intent === 'status') {\n  msg = \"No task data is available, so I can't produce a status report. I won't make up task statuses or progress percentages. Please share the task board (task names, statuses and sprint).\";\n} else if (r.intent === 'milestone') {\n  msg = \"I need the project timeline or task board to answer that. Please share it\"\n    + (missing ? ' (missing: ' + missing + ')' : '') + '.';\n} else if (r.intent === 'comms') {\n  msg = \"I need the sprint tasks to write that update. Please tell me which sprint and share the task data.\";\n} else {\n  msg = \"I can help with project plans, risk assessments, status reports, upcoming milestones and stakeholder updates. Which would you like, and for which project?\";\n}\n\nreturn [{ json: { output: msg } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        -288
+      ],
+      "id": "784eab7f-f414-48c9-aacc-ecbc19591370",
+      "name": "Clarify Reply"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "ROLE: You are a project planner at Nexora Pvt. Ltd.\nINPUT: A project description and a project timeline (JSON) for one project.\nOUTPUT: Markdown with exactly these sections:\n1. Project Overview (2-3 sentences)\n2. Goals (only goals stated in the description)\n3. Phase Plan: a table with columns Phase | Weeks | Dates | Key Activities | Milestones and Deliverables\n4. Governance and Team (only what the description states)\n5. Assumptions and Gaps (what the source files do not specify, plus the assumption that Week 1 starts on the given project start date)\nRULES:\n1) Use only the phases, activities and milestones in the timeline. Do not add, remove or rename phases.\n2) Do NOT invent goals, budgets, team sizes, owners, dates or deliverables.\n3) If something is not in the input, write \"Not specified in source.\"\n4) Use the start_date and end_date values from the timeline exactly as given.\n5) Keep the tone professional and concise.\n6) Copy each phase's key activities and deliverables word for word from the timeline. Do not shorten them.\n7) In Assumptions and Gaps, the first bullet must say: \"Dates assume Week 1 starts on the project start date given in the input (assumed, not stated in the source files).\" Never add a bullet that only says \"Not specified in source.\" Name the missing item instead, for example \"Budget: not specified in source.\""
+            },
+            {
+              "content": "=PROJECT DESCRIPTION:\n{{ $json.description }}\n\nPROJECT START DATE: {{ $json.config.project_start }}\n\nTIMELINE (JSON):\n{{ JSON.stringify($json.timeline) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2176,
+        -480
+      ],
+      "id": "749fd2da-70d0-4e43-9175-a266c45a2f23",
+      "name": "Planner",
+      "credentials": {
+        "openAiApi": {
+          "id": "0w8HIjNxXSFcIrwT",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.output[0].content[0].text;\nreturn [{ json: { output: text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        -480
+      ],
+      "id": "64086f98-2be1-4353-be82-ae8384aa074d",
+      "name": "Reply Plan"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "ROLE: You are a risk analyst at Nexora Pvt. Ltd.\nINPUT: A user request, a project description, a risk register (JSON with risk_id, category, risk_challenge, impact, mitigation_strategy), and task evidence (blocked, overdue and due-soon tasks, as JSON).\nOUTPUT depends on the request:\nA) If the request asks for a risk assessment: a Markdown table with columns Risk ID | Category | Risk | Impact | Mitigation | Link to this project. Include every risk in the register. In \"Link to this project\", connect the risk to the project description or to task evidence (cite task IDs and names exactly). If there is no evidence, write \"No direct evidence in task data.\"\nB) If the request asks for the top N risks (default 3): a numbered list of N risks from the register. For each give the risk ID, category, and a short reason for the ranking, citing task IDs and names from the task evidence where they apply.\nEnd every answer with a Notes section that says the risk register has no probability or severity scores, so any ranking is a judgment based on the evidence above.\nRULES:\n1) Use only risks that appear in the register. Do not add, rename or invent risks.\n2) Copy each risk's category, impact and mitigation wording from the register.\n3) Do NOT invent probabilities, scores, percentages, costs or dates.\n4) When you connect a risk to a task, label the link as an inference.\n5) Keep the tone professional and concise.\n6) Answer only what was asked. For a risk assessment request, output only format A and no top-N list. For a top-N request, output only format B and no full table. Always end with the Notes section.\n7) When ranking the top N risks, rank risks with task evidence first, in this order: linked to a Blocked task, then linked to an Overdue task, then linked to a task due within 7 days. Use risks without task evidence only if fewer than N risks have evidence, and for those write \"No task evidence; ranked on register content only.\" Only claim task evidence when a listed task is clearly about that risk's topic. Name the task ID and the evidence type (Blocked, Overdue or Due soon) for every risk that has evidence."
+            },
+            {
+              "content": "=REQUEST: {{ $json.chat_input }}\n\nPROJECT DESCRIPTION:\n{{ $json.description }}\n\nRISK REGISTER (JSON):\n{{ JSON.stringify($json.risks) }}\n\nTASK EVIDENCE (JSON)\nBlocked: {{ JSON.stringify($json.blocked) }}\nOverdue: {{ JSON.stringify($json.overdue) }}\nDue within 7 days: {{ JSON.stringify($json.due_soon) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2176,
+        -96
+      ],
+      "id": "4e240e37-e142-4715-a8d9-5d70b80ed8c5",
+      "name": "Risk Assessor",
+      "credentials": {
+        "openAiApi": {
+          "id": "0w8HIjNxXSFcIrwT",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.output[0].content[0].text;\nreturn [{ json: { output: text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        -96
+      ],
+      "id": "8b7c0e86-a5d0-4280-9961-34b09be60ba1",
+      "name": "Reply Risk"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $json;\nconst sprint = j.route.sprint;\nconst tasks = sprint ? (j.by_sprint[sprint] || []) : j.tasks;\nconst counts = { total: tasks.length, Done: 0, 'In Progress': 0, Blocked: 0, 'To Do': 0 };\nfor (const t of tasks) counts[t.status] = (counts[t.status] || 0) + 1;\nconst ids = new Set(tasks.map(t => t.task_id));\nreturn [{ json: {\n  ...j,\n  scope: sprint ? sprint : 'All sprints',\n  scope_tasks: tasks,\n  scope_counts: counts,\n  scope_blocked: j.blocked.filter(t => ids.has(t.task_id)),\n  scope_overdue: j.overdue.filter(t => ids.has(t.task_id)),\n  scope_due_soon: j.due_soon.filter(t => ids.has(t.task_id))\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        96
+      ],
+      "id": "75cb1b10-7d2c-40ff-8442-47c83058f4e2",
+      "name": "Prepare Status"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "ROLE: You are a project status reporter at Nexora Pvt. Ltd.\nINPUT: A request, the report scope, the as-of date, pre-computed task counts, the task list for the scope, and lists of blocked, overdue and due-soon tasks. All numbers were computed by code.\nOUTPUT: Markdown with exactly these sections:\n1. Header: project name (AI Adoption Project, ABCDE Ltd.), scope, as-of date.\n2. Summary counts: a table with Done, In Progress, Blocked, To Do and Total, copied exactly from the provided counts.\n3. Tasks by status: for each status that has tasks, a list of task ID, task name, assignee and due date.\n4. Blocked items: each blocked task with its description or blocker if given, otherwise \"None\".\n5. At risk: overdue tasks (due date earlier than the as-of date and not Done) and tasks due within 7 days, each labeled. Write \"None\" if empty.\n6. Overall health: exactly one of RED (any blocked task), AMBER (no blocked tasks but at least one overdue task), GREEN (neither), followed by one sentence naming the task IDs behind the rating.\nRULES:\n1) Use ONLY the provided data. Never invent tasks, names, statuses, dates, percentages or progress figures.\n2) Copy the counts exactly. Do not recount or round.\n3) Use task names exactly as given.\n4) If a section has no data, write \"None\".\n5) Keep it concise and professional.\n6) In Blocked items, show for every blocked task: task ID, task name, assignee, due date, and the blocker taken from its description (the text after \"BLOCKED:\"). If the description has no blocker text, write \"blocker not stated\".\n7) In Tasks by status, include every status that has tasks, including To Do. If a status has more than 6 tasks, list only the task ID and task name for each one."
+            },
+            {
+              "content": "=REQUEST: {{ $json.chat_input }}\nSCOPE: {{ $json.scope }}\nAS-OF DATE: {{ $json.config.as_of_date }}\n\nCOUNTS (computed by code): {{ JSON.stringify($json.scope_counts) }}\n\nTASKS IN SCOPE (JSON): {{ JSON.stringify($json.scope_tasks) }}\n\nBLOCKED: {{ JSON.stringify($json.scope_blocked) }}\nOVERDUE: {{ JSON.stringify($json.scope_overdue) }}\nDUE WITHIN 7 DAYS: {{ JSON.stringify($json.scope_due_soon) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2176,
+        96
+      ],
+      "id": "5441cc19-bd6a-47d0-8f36-d050b5f82dfb",
+      "name": "Status Reporter",
+      "credentials": {
+        "openAiApi": {
+          "id": "0w8HIjNxXSFcIrwT",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.output[0].content[0].text;\nreturn [{ json: { output: text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        96
+      ],
+      "id": "3ae6a8d7-8e53-4d93-9bd1-515adfa3226e",
+      "name": "Reply Status"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $json;\nconst asOf = j.config.as_of_date;\nconst d = new Date(asOf + 'T00:00:00Z');\nd.setUTCDate(d.getUTCDate() + 14);\nconst windowEnd = d.toISOString().slice(0, 10);\nreturn [{ json: { ...j, window_start: asOf, window_end: windowEnd } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        288
+      ],
+      "id": "6d5f4ead-5458-43aa-9be1-2e4153700a5e",
+      "name": "Prepare Milestones"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "ROLE: You are a milestone tracker at Nexora Pvt. Ltd.\nINPUT: A user request, an as-of date, a 14-day look-ahead window, timeline phases that end or start inside the window, and task lists (blocked, overdue, due within 7 days). All dates and lists were computed by code.\nOUTPUT depends on the request:\nA) If the request asks which tasks are blocked or at risk of missing deadlines: three sections. Blocked: each task with ID, name, assignee, due date, and the blocker reason from its description. Overdue: each task with ID, name, assignee, due date and how many days past due as of the as-of date. Due within 7 days: each task with ID, name, assignee and due date. Then Suggested actions: one short action per item, labeled as a suggestion.\nB) If the request asks what milestones are coming up: state the window (start to end date). Then a table with columns Phase | Phase dates | Milestones and deliverables | Why it is in the window (ends in window or starts in window). Use only phases provided. If a phase starts in the window but ends after the window end, say its deliverables fall after the window.\nRULES:\n1) Use ONLY the provided data. Never invent milestones, tasks, dates or reasons.\n2) Use task names and milestone wording exactly as given.\n3) Write \"None\" for any empty section.\n4) If you suggest that one task may affect another, label it as an inference. Do not state dependencies as facts.\n5) Answer only what was asked, in the matching format."
+            },
+            {
+              "content": "=REQUEST: {{ $json.chat_input }}\nAS-OF DATE: {{ $json.window_start }}\nWINDOW: {{ $json.window_start }} to {{ $json.window_end }}\n\nPHASES ENDING IN WINDOW (JSON): {{ JSON.stringify($json.phases_ending_in_window) }}\nPHASES STARTING IN WINDOW (JSON): {{ JSON.stringify($json.phases_starting_in_window) }}\n\nBLOCKED TASKS: {{ JSON.stringify($json.blocked) }}\nOVERDUE TASKS: {{ JSON.stringify($json.overdue) }}\nDUE WITHIN 7 DAYS: {{ JSON.stringify($json.due_soon) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2176,
+        288
+      ],
+      "id": "4100ad62-5014-4a04-90df-eaf2b681e855",
+      "name": "Milestone Tracker",
+      "credentials": {
+        "openAiApi": {
+          "id": "0w8HIjNxXSFcIrwT",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.output[0].content[0].text;\nreturn [{ json: { output: text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        336
+      ],
+      "id": "13abc6be-8e2f-489f-ac9a-ff787f3fad06",
+      "name": "Reply Milestone"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $json;\nconst sprint = j.route.sprint || j.config.current_sprint;\nconst tasks = j.by_sprint[sprint] || [];\nconst asOf = j.config.as_of_date;\nconst counts = { total: tasks.length, Done: 0, 'In Progress': 0, Blocked: 0, 'To Do': 0 };\nfor (const t of tasks) counts[t.status] = (counts[t.status] || 0) + 1;\nconst overdue = tasks.filter(t => t.status !== 'Done' && t.due_date < asOf);\nreturn [{ json: { ...j, comms_sprint: sprint, comms_tasks: tasks, comms_counts: counts, comms_overdue: overdue } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        480
+      ],
+      "id": "b0dfaa39-d338-41de-b81a-5976b070f413",
+      "name": "Prepare Comms"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "ROLE: You are a project communications writer at Nexora Pvt. Ltd.\nINPUT: A request, the sprint name, the as-of date, task counts for that sprint (computed by code), the list of tasks in that sprint with descriptions, and the overdue tasks in that sprint.\nOUTPUT: An email with: a Subject line; a greeting; a 2-3 sentence progress summary that states the counts; a Completed section (task ID and name); an In progress section (task ID, name, owner, due date, and whether it is past due as of the as-of date); a Risks and next steps section using only the provided data (write \"None identified in the sprint data\" if there is nothing); a short closing; and the sign-off \"[Sender name], Nexora Project Management\".\nAUDIENCE: Write for leadership by default. If the request mentions engineering, add a little more task detail. If it mentions a client, use plain, reassuring but factual language.\nRULES:\n1) Use ONLY the tasks provided. Never mention any other task, sprint, milestone or phase. Never mention a later sprint.\n2) Counts must match the provided counts exactly.\n3) Do NOT invent dates, percentages, quotes, commitments or outcomes.\n4) Keep it professional and under 200 words.\n5) If any task is listed under OVERDUE, the Risks and next steps section must name it (ID, name, owner, due date) and suggest one action, labeled as a suggestion. Only write \"None identified in the sprint data\" when there are no overdue tasks.\n6) Sign off with the placeholder \"[Sender name], Nexora Project Management\" exactly, so the sender can fill it in."
+            },
+            {
+              "content": "=REQUEST: {{ $json.chat_input }}\nSPRINT: {{ $json.comms_sprint }}\nAS-OF DATE: {{ $json.config.as_of_date }}\n\nCOUNTS (computed by code): {{ JSON.stringify($json.comms_counts) }}\n\nTASKS IN THIS SPRINT (JSON): {{ JSON.stringify($json.comms_tasks) }}\n\nOVERDUE IN THIS SPRINT: {{ JSON.stringify($json.comms_overdue) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2176,
+        480
+      ],
+      "id": "270dbc7d-a4e1-4ab5-bdf8-efdcc0bf8637",
+      "name": "Stakeholder Updater",
+      "credentials": {
+        "openAiApi": {
+          "id": "0w8HIjNxXSFcIrwT",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.output[0].content[0].text;\nreturn [{ json: { output: text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        496
+      ],
+      "id": "bb463232-5fca-4804-a23a-1356cb1a2049",
+      "name": "Reply Comms"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://us.cloud.langfuse.com/api/public/otel/v1/traces",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  resourceSpans: [{\n    resource: { attributes: [{ key: 'service.name', value: { stringValue: 'mira' } }] },\n    scopeSpans: [{\n      scope: { name: 'mira-n8n' },\n      spans: [{\n        traceId: [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''),\n        spanId: [...Array(16)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''),\n        name: 'mira-' + ($('Parse Route').first().json.route.intent || 'unknown'),\n        kind: 1,\n        startTimeUnixNano: String($now.toMillis() - 1000) + '000000',\n        endTimeUnixNano: String($now.toMillis()) + '000000',\n        attributes: [\n          { key: 'langfuse.trace.name', value: { stringValue: 'mira-' + ($('Parse Route').first().json.route.intent || 'unknown') } },\n          { key: 'langfuse.observation.input', value: { stringValue: String($('Parse Route').first().json.chat_input) } },\n          { key: 'langfuse.observation.output', value: { stringValue: String($json.output).slice(0, 4000) } },\n          { key: 'langfuse.trace.tags', value: { arrayValue: { values: [{ stringValue: 'route:' + $('Parse Route').first().json.route_key }] } } }\n        ]\n      }]\n    }]\n  }]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2864,
+        -144
+      ],
+      "id": "96a23845-43d4-45c2-bd81-b3b6a2697a86",
+      "name": "Trace",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "dNhzjFZcq59jPYGJ",
+          "name": "Langfuse"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const names = ['Reply Plan', 'Reply Risk', 'Reply Status', 'Reply Milestone', 'Reply Comms', 'Clarify Reply'];\nfor (const n of names) {\n  try {\n    const items = $(n).all();\n    if (items.length && items[0].json.output) {\n      return [{ json: { output: items[0].json.output } }];\n    }\n  } catch (e) {}\n}\nreturn [{ json: { output: 'No answer was produced.' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3088,
+        -144
+      ],
+      "id": "09e89339-0350-48af-bd6f-3da060f920b1",
+      "name": "Final Reply"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Load Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Description": {
+      "main": [
+        [
+          {
+            "node": "Load Timeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Timeline": {
+      "main": [
+        [
+          {
+            "node": "Load Risks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Risks": {
+      "main": [
+        [
+          {
+            "node": "Load Task Board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Task Board": {
+      "main": [
+        [
+          {
+            "node": "Assemble Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Context": {
+      "main": [
+        [
+          {
+            "node": "Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "Parse Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Route": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Planner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Risk Assessor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Milestones",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Comms",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clarify Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Planner": {
+      "main": [
+        [
+          {
+            "node": "Reply Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Risk Assessor": {
+      "main": [
+        [
+          {
+            "node": "Reply Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Status": {
+      "main": [
+        [
+          {
+            "node": "Status Reporter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Reporter": {
+      "main": [
+        [
+          {
+            "node": "Reply Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Milestones": {
+      "main": [
+        [
+          {
+            "node": "Milestone Tracker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Milestone Tracker": {
+      "main": [
+        [
+          {
+            "node": "Reply Milestone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Comms": {
+      "main": [
+        [
+          {
+            "node": "Stakeholder Updater",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stakeholder Updater": {
+      "main": [
+        [
+          {
+            "node": "Reply Comms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Comms": {
+      "main": [
+        [
+          {
+            "node": "Trace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Plan": {
+      "main": [
+        [
+          {
+            "node": "Trace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clarify Reply": {
+      "main": [
+        [
+          {
+            "node": "Trace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Risk": {
+      "main": [
+        [
+          {
+            "node": "Trace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Status": {
+      "main": [
+        [
+          {
+            "node": "Trace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Milestone": {
+      "main": [
+        [
+          {
+            "node": "Trace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trace": {
+      "main": [
+        [
+          {
+            "node": "Final Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e43c0033-5679-42da-80df-46ed5baf43e4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ec4f3655d17daa19a5288cbca637de661f51f490a4e49ce8a984f9e8ea511425"
+  },
+  "nodeGroups": [],
+  "id": "sKLEkMKuiIkJb8Ze",
+  "tags": []
+}
