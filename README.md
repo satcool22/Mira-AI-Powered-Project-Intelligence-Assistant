@@ -27,10 +27,37 @@ Pattern: Router / Dispatcher. One Orchestrator (AI) classifies each request and 
 - /results: baseline test outputs (T01 to T12), screenshots, Langfuse traces
 
 ## How to run
+## Setup
 1. Import workflow/Mira_workflow.json into n8n (Workflows, Import from file).
-2. Create an OpenAI credential and a Basic Auth credential named "Langfuse" (public key as user, secret key as password; US endpoint).
-3. Check the Config node values: as_of_date 2026-04-22, project_start 2026-04-06, current_sprint Sprint 3.
-4. Open the chat and send a request, for example "Generate a weekly status report using the sample task board data for Sprint 3."
+2. Copy .env.example and fill in your own values. Never commit real keys.
+3. In n8n create two credentials: an OpenAI credential, and a Basic Auth credential named "Langfuse" (public key as user, secret key as password; US endpoint).
+4. Check the Config node values: as_of_date 2026-04-22, project_start 2026-04-06, current_sprint Sprint 3.
+
+## Environment variables
+| Variable | Used by | Where to enter it |
+|---|---|---|
+| OPENAI_API_KEY | All AI nodes | n8n OpenAI credential |
+| LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY | Trace node | n8n Basic Auth credential "Langfuse" |
+| LANGFUSE_OTLP_ENDPOINT | Trace node | HTTP Request URL |
+| AS_OF_DATE, PROJECT_START, CURRENT_SPRINT | Config node | n8n Config node |
+| DATA_BASE_URL | Four Load nodes | HTTP Request URLs |
+
+## How to run
+Open the n8n chat and send a request.
+
+## Sample usage
+- "Generate a weekly status report using the sample task board data for Sprint 3."
+- "What are the top 3 risks right now?"
+- "Write a stakeholder update email for Sprint 2."
+- "Make me a plan." (vague, so Mira asks for scope, goals, timeline and team)
+
+## How to run tests
+1. Open data/eval_mira_inputs.txt (the 12 test inputs, T1 to T12).
+2. Send each input to the n8n chat, one at a time.
+3. Compare each answer with results/baseline_results.md.
+4. Open Langfuse, Tracing: each request should appear as one trace tagged with its route (mira-plan, mira-risk, mira-status, mira-milestone, mira-comms or mira-clarify).
+
+Pass rule: every answer is grounded in the files, counts and dates are correct, and nothing is invented. Vague inputs (T2, T4, T6, T9) must get the Clarify reply.
 
 ## Baseline test results
 All 12 tests pass (see results/baseline_results.md). Prompt fixes were documented for T1, T3, T7, T10 and T12.
