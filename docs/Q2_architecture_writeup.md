@@ -59,7 +59,7 @@ Requests are different types (plan, risk, status, milestones, comms) and each ne
 |---|---|---|---|---|
 | Orchestrator | 393 | 29 | $0.0000764 | Measured |
 | Status Reporter (25 tasks) | 2,480 | 973 | $0.0009558 | Measured |
-| Planner, Risk, Milestone, Comms | ~1,200 to 2,200 | ~250 to 1,100 | ~$0.00035 to $0.00099 | Estimated |
+| Cost per plan (Orchestrator + Planner): about $0.0006. |
 
 Every request pays for the Orchestrator plus one specialist; vague requests pay only for the Orchestrator. A typical mix of 15 requests per user per day costs about $0.0093 per day, about $0.20 per user per month (details: docs/cost_and_metrics.md).
 
