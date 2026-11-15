@@ -31,22 +31,22 @@ Nexora's PMs and TPMs run several projects at once with very little support. The
 
 ## Use case 2: Meeting notes to action items and decision log
 
-**Pain point.** After every meeting, a PM spends 30 to 60 minutes turning notes or a transcript into action items, owners, due dates and decisions. Items are lost, owners are unclear, and nobody can later find why a decision was made.
+**Pain point.** Meetings now end with AI-generated notes, which help, but they still miss or misspell people's names and project terms, so I have to read and correct them before anyone can act. Owners and due dates are often unclear, and on cross-functional projects the items that depend on other teams are the ones that get lost.
 
-**Agentic solution.** A fixed three-step pipeline, because every meeting goes through the same stages: (1) an Extractor agent lists actions, decisions and open questions, quoting the sentence each came from; (2) a Validator agent marks each item as stated, ambiguous or missing an owner or date, and never fills in a missing owner or date; (3) a Formatter agent produces the action list, the decision log and a follow-up message for the PM to review and send. Items that cannot be matched to a quote are dropped.
+**Agentic solution.** A fixed three-step pipeline, because every meeting goes through the same stages: (1) an Extractor agent lists actions, decisions and open questions, quoting the sentence each came from; (2) a Validator agent checks every name and term against the attendee list and a project glossary, and marks each item as stated, ambiguous, or missing an owner or date. It never fills in a missing owner or date; (3) a Formatter agent produces the action list, the decision log and a follow-up message. A PM always reviews the result before it is shared. Items that cannot be matched to a quote are dropped.
 
 **Inputs and outputs.**
-- Inputs: meeting transcript or notes, attendee list, the project's task board, and previous decision log.
-- Outputs: action items with owner and due date (or "not stated"), a decision log entry, a list of open questions, and a draft follow-up email.
+- Inputs: meeting transcript or notes, attendee list, project glossary (names, terms, acronyms), the project's task board, and the previous decision log.
+- Outputs: action items with owner and due date (or "not stated"), a decision log entry, a list of open questions and unrecognised names or terms, and a draft follow-up email.
 
 **Success metrics.**
 | Metric | Target |
 |---|---|
 | Extraction completeness: share of real action items captured (checked against a PM's manual list) | At least 90% |
+| Name and term accuracy: share of names and terms that match the attendee list or glossary | At least 95% |
 | Traceability: share of extracted items backed by a quote from the notes | 100% |
-| PM time saved per meeting | At least 25 minutes |
 
-**Knowledge base needed.** Meeting transcripts or notes, attendee and role list, the project's open task list, and the running decision log.
+**Knowledge base needed.** Meeting transcripts or notes, attendee and role list, project glossary, the project's open task list, and the running decision log.
 
 ## Use case 3: Workload and dependency advisor
 
