@@ -50,13 +50,13 @@ Nexora's PMs and TPMs run several projects at once with very little support. The
 
 ## Use case 3: Workload and dependency advisor
 
-**Pain point.** Task boards show who is assigned what, but not whether someone is overloaded or whether one late task will push others. PMs find out when a deadline is missed. In the ABCDE board, for example, assignments range from 4 tasks (Ravi Kumar) to 6 tasks (Arjun Mehta), and a blocked security review (T024) sits in the same sprint as other work, but nobody sees the combined effect.
+**Pain point.** On cross-functional projects, owners often miss internal and external dependencies, so work slows down and nobody sees why until a meeting is called to sort it out. Task boards show who is assigned what, but not whether someone is overloaded or whether one late task will push others. In the ABCDE board, for example, assignments range from 4 tasks (Ravi Kumar) to 6 tasks (Arjun Mehta), and a blocked security review (T024) sits in the same sprint as other work, but nobody sees the combined effect.
 
-**Agentic solution.** Code computes tasks per person per sprint, overdue and due-soon counts, and which tasks share a sprint with a blocked task. A Router then sends a request such as "Is anyone overloaded in Sprint 5?" or "What is affected if T024 slips?" to an Advisor agent that explains the computed numbers and suggests options (rebalance, reorder, escalate), always labeled as suggestions. Dependencies that are not in the data are labeled as inferences, never as facts.
+**Agentic solution.** Code computes tasks per person per sprint, overdue and due-soon counts, and which tasks share a sprint with a blocked task. A Router then sends a question such as "What dependencies could stop us meeting the Sprint 5 date?" or "What is affected if T024 slips?" to an Advisor agent. The Advisor explains the computed numbers and suggests options (rebalance, reorder, escalate), always labeled as suggestions. It separates confirmed dependencies (in the data) from inferred ones, flags missing owners or dates instead of guessing, and a PM validates every finding with the owners before acting.
 
 **Inputs and outputs.**
-- Inputs: task board with assignee, sprint, due date and status; optional team capacity (days available per person); the user's question.
-- Outputs: a workload table per person and sprint, an at-risk list, and two or three suggested actions with the numbers behind each.
+- Inputs: task board with assignee, sprint, due date and status; a dependency list (which task needs what, from which team, required-by and committed dates); optional team capacity; the user's question.
+- Outputs: a workload table per person and sprint, a dependency list marked confirmed, inferred or missing, an at-risk list with the critical path, and two or three suggested actions with the numbers behind each.
 
 **Success metrics.**
 | Metric | Target |
@@ -65,7 +65,7 @@ Nexora's PMs and TPMs run several projects at once with very little support. The
 | Early warning: at-risk tasks flagged at least 5 working days before the due date | At least 80% of tasks that later slip |
 | Suggestion usefulness: share of suggestions a PM rates useful or acted on | At least 60% |
 
-**Knowledge base needed.** The task board export, team capacity and leave calendar, the project timeline, and any known task dependencies.
+**Knowledge base needed.** The task board export, a dependency list with owners and dates, team capacity and leave calendar, and the project timeline.
 
 ## Why these three
 All three share the same design lesson from Mira: compute facts in code, let the model write and explain, ground every output in supplied data, and ask for more information when the data is not enough. Use case 1 is built and measured; use cases 2 and 3 would reuse the same router, tracing and test approach, and each would start with its own baseline test set before use.
