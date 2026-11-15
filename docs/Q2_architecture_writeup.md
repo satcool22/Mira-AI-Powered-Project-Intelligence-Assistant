@@ -45,14 +45,14 @@ Screenshot of the built workflow: results/Workflow_canvas.png.
 Requests are different types (plan, risk, status, milestones, comms) and each needs different data and a different output format. A sequential pipeline would run every agent on every request and make the status agent run when someone only wants a plan. The Router also holds the most important safeguard: the Orchestrator decides whether there is enough data, and vague requests go to a fixed Clarify reply instead of the AI, so nothing can be invented.
 
 ## 5. Agents
-| Agent | Job | Input | Key prompt rules |
-|---|---|---|---|
-| Orchestrator | Classify the request and check data sufficiency | User request | Return JSON only; never guess a sprint; inline text must contain scope, goals and timeline or team |
-| Planner | Plan with phases, milestones and dates | Description, timeline | Use only timeline phases; "Not specified in source" for gaps; state the Week 1 start-date assumption |
-| Risk Assessor | Risk matrix or top-N risks | Risk register, task evidence | Only register risks; no invented scores; rank by task evidence (Blocked, then Overdue, then Due soon) |
-| Status Reporter | Weekly status report | Counts computed by code | Copy counts exactly; list every status; blocker taken from the task description |
-| Milestone Tracker (extended) | Blocked or at-risk tasks, upcoming milestones | Blocked, overdue and due-soon lists, phases in a 14-day window | Dates come from code; suggestions are labeled; dependencies labeled as inference |
-| Stakeholder Updater (extended) | Sprint email | Tasks of one sprint only | Code filters the sprint, so later sprints never reach the model; overdue tasks must appear under Risks |
+| Agent | Job | Key prompt rules |
+|---|---|---|
+| Orchestrator | Classify the request and check data sufficiency | JSON only; never guess a sprint; inline text must contain scope, goals and timeline or team |
+| Planner | Plan with phases, milestones and dates | Only timeline phases; "Not specified in source" for gaps; state the Week 1 start-date assumption |
+| Risk Assessor | Risk matrix or top-N risks | Only register risks; no invented scores; rank by task evidence (Blocked, Overdue, Due soon) |
+| Status Reporter | Weekly status report | Copy code-computed counts exactly; list every status |
+| Milestone Tracker (extended) | Blocked or at-risk tasks, upcoming milestones | Dates come from code; suggestions and inferred dependencies are labeled |
+| Stakeholder Updater (extended) | Sprint email | Code filters one sprint, so later sprints never reach the model; overdue tasks appear under Risks |
 
 ## 6. Cost analysis (gpt-4o-mini, $0.15 per 1M input and $0.60 per 1M output tokens)
 | Call | Input | Output | Cost | Source |
@@ -72,17 +72,15 @@ Every request pays for the Orchestrator plus one specialist; vague requests pay 
 4. Trust: hallucination rate in traced runs (baseline 0 of 12). Usefulness: PM time saved per week, to be measured in a pilot.
 
 ## 8. Testing observations
-All 12 baseline tests pass, and all were re-run with tracing on. Vague inputs (T2, T4, T6, T9) were correctly answered with a request for more detail and no invented content. Failures found and fixed through traces and outputs:
+All 12 baseline tests pass, and all were re-run with tracing on. Vague inputs (T2, T4, T6, T9) were answered with a request for more detail and no invented content. Failures found and fixed:
 
 | Issue found | Test | Fix |
 |---|---|---|
-| Plan missed the Week 1 start-date assumption and had a stray "Not specified" bullet | T1 | Added prompt rules 6 and 7 |
-| Risk assessment also printed an unrequested top-3 list | T3 | Rule "answer only what was asked" |
-| Top 3 risks were generic (R01, R02, R04) and ignored the Blocked task | T7 | Rule to rank by task evidence; result became R09, R01, R05 |
-| Blocker detail missing, then To Do list omitted | T10 | Passed the task description field through; added rule to list every status |
-| Overdue task not named under Risks; placeholder name in sign-off | T12 | Added rules 5 and 6 |
-| Tracing: legacy endpoint returned 201 but showed nothing in Langfuse v4; chat then showed the ingestion receipt | Observability | Switched to the OTLP endpoint; added a Final Reply node |
+| Plan missed the Week 1 start-date assumption | T1 | Added prompt rules 6 and 7 |
+| Top 3 risks were generic and ignored the Blocked task | T7 | Rank by task evidence; result became R09, R01, R05 |
+| Overdue task not named under Risks | T12 | Added rules 5 and 6 |
+| Legacy tracing endpoint returned 201 but showed nothing in Langfuse v4 | Observability | Switched to the OTLP endpoint; added a Final Reply node |
 
-Data issues found: the problem statement says 3 Done tasks but the board has 5; the board ends around Week 18 while the timeline runs to Week 24; the timeline CSV and PDF word Phase 8 differently; the risk register has no severity scores.
+Data issues found: the problem statement says 3 Done tasks but the board has 5; the board ends around Week 18 while the timeline runs to Week 24; the risk register has no severity scores.
 
 Key lesson: counts, dates and filtering are computed in code and the model only writes the narrative, which is why status counts were never wrong.
