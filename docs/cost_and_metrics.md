@@ -6,12 +6,13 @@
 |---|---|---|---|---|
 | Orchestrator | 393 | 29 | $0.0000764 | Measured (n8n output, usage field) |
 | Status Reporter (all 25 tasks) | 2,480 | 973 | $0.0009558 | Measured |
-| Planner | ~1,500 | ~900 | ~$0.00077 | Estimated from prompt size |
+| Planner (T1 plan) | 1,116 | 605 | $0.0005304 | Measured (n8n output, usage field) |
 | Risk Assessor | ~2,200 | ~1,100 | ~$0.00099 | Estimated |
 | Milestone Tracker | ~1,200 | ~300 | ~$0.00036 | Estimated |
 | Stakeholder Updater | ~1,300 | ~250 | ~$0.00035 | Estimated |
 
 Every request pays for the Orchestrator plus one specialist. Vague requests (clarify route) pay only for the Orchestrator: $0.0000764.
+Cost per plan (Orchestrator + Planner): $0.0006068, about $0.0006.
 
 | Cost item | Estimate |
 |---|---|
@@ -23,6 +24,7 @@ Every request pays for the Orchestrator plus one specialist. Vague requests (cla
 | Observability (Langfuse Hobby tier) | Free tier |
 | Workflow platform (n8n Cloud) | Plan cost not included |
 
+The typical-mix and monthly figures were calculated with the earlier Planner estimate (~$0.00077). With the measured $0.00053, a typical day is about $0.0088 and a month about $0.19, so the figures above are slightly conservative.
 Prices should be re-checked against OpenAI's current price list before relying on these figures.
 
 ## Production metrics
