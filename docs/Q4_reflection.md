@@ -37,7 +37,7 @@ Fine-tuning is not justified yet, because every failure was fixed with a prompt 
 
 **Gate between phases:** 0 fabricated items reaching a stakeholder, status accuracy at 100%, and satisfaction of at least 4 of 5.
 
-## 6. My own reflection
+## 6. What I Learned
 
 **What surprised me**
 - Observability: the Langfuse call returned success (201) but nothing appeared, and I only found the problem by checking the tool itself.
